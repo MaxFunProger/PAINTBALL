@@ -68,6 +68,8 @@ class Plat(pygame.sprite.Sprite):
         self.top = 600
         self.flag = False
         self.dir = None
+        self.mv = False
+        self.u = 10
 
     def render(self, scr):
         cords = [self.left, self.top]
@@ -76,15 +78,15 @@ class Plat(pygame.sprite.Sprite):
 
     def pl_move(self, k):
         if k == 'l':
-            if self.left - 2 >= 0:
+            if self.left - self.u >= 0:
                 self.prev = self.left
-                self.left -= 2
+                self.left -= self.u
             else:
                 self.prev = self.left
         elif k == 'r':
-            if self.left + 2 <= 1020:
+            if self.left + self.u + self.size[0] <= 1020:
                 self.prev = self.left
-                self.left += 2
+                self.left += self.u
             else:
                 self.prev = self.left
 
@@ -104,13 +106,19 @@ while running:
             f.get_click(event.pos)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                pl.pl_move('l')
+                pl.dir = 'l'
+                pl.mv = True
             elif event.key == pygame.K_RIGHT:
-                pl.pl_move('r')
+                pl.dir = 'r'
+                pl.mv = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                pl.mv = False
+    if pl.mv:
+        pl.pl_move(pl.dir)
     clock.tick(FPS)
     pygame.event.pump()
 
     f.render(screen)
     pl.render(screen)
     pygame.display.flip()
-
