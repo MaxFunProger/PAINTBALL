@@ -177,8 +177,6 @@ while running:
     if pl.mv:
         pl.pl_move(pl.dir)
     clock.tick(FPS)
-    pygame.event.pump()
-
     f.render(screen)
     pl.render(screen)
     b.render_ball(screen)
