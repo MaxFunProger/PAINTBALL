@@ -129,6 +129,7 @@ class Ball(Plat):
             self.left_b = left + self.size[0] // 2
             self.top_b = self.top - self.size[1] // 2
             self.fly = True
+            self.cords_b = [self.left_b, self.top_b, self.rad]
             pygame.time.set_timer(MOVE, 20)
 
     def mover(self):
@@ -142,7 +143,6 @@ class Ball(Plat):
             self.direct[1] = -self.u_b
         self.cords_b[0] += self.direct[0]
         self.cords_b[1] += self.direct[1]
-        print(self.prev_b)
 
 
 f = Field()
