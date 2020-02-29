@@ -1,9 +1,10 @@
 import pygame
+from random import randint
 
 pygame.init()
 size_1 = 1020, 700
 screen = pygame.display.set_mode(size_1)
-screen.fill([0, 0, 0])
+screen.fill([255, 255, 255])
 FPS = 60
 MOVE = 30
 all_sprites = pygame.sprite.Group()
@@ -19,7 +20,7 @@ for i in range(height):
     for j in range(width):
         field[i][j] = pygame.sprite.Sprite()
 
-options = [[-1] * width for i in range(height)]
+options = [[randint(-3, -1)] * width for i in range(height)]
 
 
 class Field(pygame.sprite.Sprite):
@@ -37,16 +38,20 @@ class Field(pygame.sprite.Sprite):
             for j in range(self.width):
                 if options[i][j] < 0:
                     field[i][j].image = pygame.Surface([self.cell_size[0] - 1, self.cell_size[1] - 1])
-                    field[i][j].image.fill(pygame.Color('green'))
+                    if options[i][j] == -1:
+                        field[i][j].image.fill(pygame.Color('green'))
+                    elif options[i][j] == -2:
+                        field[i][j].image.fill(pygame.Color('yellow'))
+                    else:
+                        field[i][j].image.fill(pygame.Color('red'))
                     field[i][j].rect = field[i][j].image.get_rect()
                     field[i][j].rect.x = cords[0]
                     field[i][j].rect.y = cords[1]
                     bricks.add(field[i][j])
                     all_sprites.add(field[i][j])
-                    options[i][j] = 1
                 elif options[i][j] == 0:
-                    field[i][j].rect.x = 100000
-                    field[i][j].rect.y = 100000
+                    field[i][j].rect.x = 1000000
+                    field[i][j].rect.y = 1000000
                 cords[0] += self.cell_size[0]
             cords[0] = self.left
             cords[1] += self.cell_size[1]
@@ -111,6 +116,7 @@ class Ball(pygame.sprite.Sprite):
         self.fly = True
 
     def update(self):
+        global score
         if self.fly:
             if pygame.sprite.spritecollideany(self, h_borders):
                 if self.rect.y > cords_p[1] - self.rad * 2 + 2:
@@ -123,23 +129,21 @@ class Ball(pygame.sprite.Sprite):
             if pygame.sprite.spritecollideany(self, bricks):
                 for i in range(height):
                     for j in range(width):
-                        if options[i][j] == 1:
+                        if options[i][j] != 0:
                             if field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y):
                                 self.direct[1] = -self.direct[1]
-                                print(1)
-                                options[i][j] = 0
+                                options[i][j] += 1
                             elif field[i][j].rect.collidepoint(self.rect.x, self.rect.y + self.rad):
                                 self.direct[0] = -self.direct[0]
-                                print(1)
-                                options[i][j] = 0
+                                options[i][j] += 1
                             elif field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y + 2 * self.rad):
                                 self.direct[1] = -self.direct[1]
-                                print(1)
-                                options[i][j] = 0
+                                options[i][j] += 1
                             elif field[i][j].rect.collidepoint(self.rect.x + 2 * self.rad, self.rect.y + self.rad):
                                 self.direct[0] = -self.direct[0]
-                                print(1)
-                                options[i][j] = 0
+                                options[i][j] += 1
+                            if not options[i][j]:
+                                score += 1
             self.rect = self.rect.move(self.direct[0], self.direct[1])
         else:
             self.rect.x = cords_p[0] - self.rad
@@ -159,9 +163,22 @@ class Border(pygame.sprite.Sprite):
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
+class Text:
+    def __init__(self):
+        self.font = pygame.font.Font(None, 50)
+        self.text = self.font.render("Score: {}".format(score), 1, (pygame.Color('red')))
+        self.text_x = 10
+        self.text_y = size_1[1] - 80
+
+    def drawer(self):
+        self.text = self.font.render("Score: {}".format(score), 1, (pygame.Color('red')))
+        screen.blit(self.text, (self.text_x, self.text_y))
+
+
 f = Field()
 pl = Plat(500, 570)
 b = Ball(500, 570)
+t = Text()
 Border(5, 5, size_1[0] - 5, 5)
 Border(5, size_1[1] - 5, size_1[0] - 5, size_1[1] - 5)
 Border(5, 5, 5, size_1[1] - 5)
@@ -174,7 +191,7 @@ clock = pygame.time.Clock()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            exit(0)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 pl.dir = 'l'
@@ -184,11 +201,14 @@ while running:
                 pl.mv = True
             elif event.key == pygame.K_SPACE:
                 b.release()
+            elif event.key == pygame.K_ESCAPE:
+                running = False
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 pl.mv = False
     clock.tick(FPS)
     f.render(screen)
+    t.drawer()
     all_sprites.draw(screen)
     all_sprites.update()
     h_borders.draw(screen)
