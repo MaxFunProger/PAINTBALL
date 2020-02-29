@@ -1,10 +1,12 @@
 import pygame
 from random import randint
+import field as fm
 
 pygame.init()
 size_1 = 1020, 700
 screen = pygame.display.set_mode(size_1)
 screen.fill([255, 255, 255])
+flag = False
 FPS = 60
 MOVE = 30
 all_sprites = pygame.sprite.Group()
@@ -15,6 +17,12 @@ bricks = pygame.sprite.Group()
 height = 7
 width = 20
 score = 0
+file = open('score.txt', 'r')
+try:
+    score_best = int(file.readline().strip())
+except:
+    score_best = 0
+file.close()
 field = [[0] * width for i in range(height)]
 for i in range(height):
     for j in range(width):
@@ -67,14 +75,14 @@ cords_p = [500, 570]
 class Plat(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__(all_sprites)
-        self.size = (70, 10)
+        self.size = (70, 20)
         cords_p[0] += self.size[0] // 2
         self.flag = False
         self.dir = None
         self.mv = False
         self.u = 10
-        self.image = pygame.Surface([self.size[0], self.size[1]])
-        self.image.fill(pygame.Color('orange'))
+        self.image = pygame.image.load('plat.jpg')
+        self.image = pygame.transform.scale(self.image, self.size)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -116,11 +124,15 @@ class Ball(pygame.sprite.Sprite):
         self.fly = True
 
     def update(self):
-        global score
+        global score, flag
         if self.fly:
             if pygame.sprite.spritecollideany(self, h_borders):
                 if self.rect.y > cords_p[1] - self.rad * 2 + 2:
-                    exit(0)
+                    file = open('score.txt', 'w')
+                    file.write(str(max(score, score_best)))
+                    file.close()
+                    flag = True
+
                 self.direct[1] = -self.direct[1]
             if pygame.sprite.spritecollideany(self, v_borders):
                 self.direct[0] = -self.direct[0]
@@ -173,6 +185,8 @@ class Text:
     def drawer(self):
         self.text = self.font.render("Score: {}".format(score), 1, (pygame.Color('red')))
         screen.blit(self.text, (self.text_x, self.text_y))
+        self.text = self.font.render("Best score: {}".format(max(score_best, score)), 1, (pygame.Color('red')))
+        screen.blit(self.text, (size_1[0] - 500, self.text_y))
 
 
 f = Field()
@@ -188,6 +202,7 @@ running = True
 screen.fill((255, 255, 255))
 f.render(screen)
 clock = pygame.time.Clock()
+fm.main()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -206,6 +221,26 @@ while running:
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 pl.mv = False
+    if flag:
+        while True:
+            screen.fill([255, 255, 255])
+            font = pygame.font.Font(None, 50)
+            text = font.render("Quit", 1, (100, 255, 100))
+            text_x = size_1[0] // 2 - text.get_width() // 2
+            text_y = size_1[1] // 2 - text.get_height() // 2
+            text_w = text.get_width()
+            text_h = text.get_height()
+            screen.blit(text, (text_x, text_y))
+            pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
+                                                   text_w + 20, text_h + 20), 1)
+            pygame.display.flip()
+            for event1 in pygame.event.get():
+                if event1.type == pygame.QUIT:
+                    exit(0)
+                elif event1.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = pygame.mouse.get_pos()
+                    if text_x - 10 <= x <= text_x + text_w + 10 and text_y - 10 <= y <= text_y + text_h + 10:
+                        exit(0)
     clock.tick(FPS)
     f.render(screen)
     t.drawer()
