@@ -13,7 +13,11 @@ plate = pygame.sprite.Group()
 bricks = pygame.sprite.Group()
 height = 7
 width = 20
-field = [[pygame.sprite.Sprite()] * width for i in range(height)]
+field = [[0] * width for i in range(height)]
+for i in range(height):
+    for j in range(width):
+        field[i][j] = pygame.sprite.Sprite()
+
 options = [[-1] * width for i in range(height)]
 
 
