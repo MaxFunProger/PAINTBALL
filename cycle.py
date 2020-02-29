@@ -10,6 +10,11 @@ all_sprites = pygame.sprite.Group()
 h_borders = pygame.sprite.Group()
 v_borders = pygame.sprite.Group()
 plate = pygame.sprite.Group()
+bricks = pygame.sprite.Group()
+height = 7
+width = 20
+field = [[pygame.sprite.Sprite()] * width for i in range(height)]
+options = [[-1] * width for i in range(height)]
 
 
 class Field(pygame.sprite.Sprite):
@@ -20,49 +25,27 @@ class Field(pygame.sprite.Sprite):
         self.top = 20
         self.height = 7
         self.width = 20
-        self.field = [[-1] * self.width for i in range(self.height)]
 
     def render(self, scr):
         cords = [self.left, self.top]
         for i in range(self.height):
             for j in range(self.width):
-                if self.field[i][j] == 1:
-                    pygame.draw.rect(scr, pygame.Color('white'), (cords[0], cords[1],
-                                                                     self.cell_size[0], self.cell_size[1]), 0)
-                elif self.field[i][j] == -1:
-                    pygame.draw.rect(scr, pygame.Color('white'), (cords[0], cords[1],
-                                                                     self.cell_size[0], self.cell_size[1]), 1)
-                else:
-                    pygame.draw.rect(scr, pygame.Color('black'), (cords[0] + 1, cords[1] + 1,
-                                                                  self.cell_size[0] - 2, self.cell_size[1] - 2), 0)
+                if options[i][j] == -1:
+                    field[i][j].image = pygame.Surface([self.cell_size[0] - 1, self.cell_size[1] - 1])
+                    field[i][j].image.fill(pygame.Color('green'))
+                    field[i][j].rect = field[i][j].image.get_rect()
+                    field[i][j].rect.x = cords[0]
+                    field[i][j].rect.y = cords[1]
+                    bricks.add(field[i][j])
+                    all_sprites.add(field[i][j])
+                    options[i][j] = 1
+                elif options[i][j] == 0:
+                    field[i][j].rect.x = 100000
+                    field[i][j].rect.y = 100000
                 cords[0] += self.cell_size[0]
             cords[0] = self.left
             cords[1] += self.cell_size[1]
         cords[1] = self.top
-
-    def on_click(self, x, y):
-        if x is not None:
-            if self.field[y][x] == -1:
-                self.field[y][x] = 1
-            else:
-                self.field[y][x] = not self.field[y][x]
-
-    def get_cell(self, x, y):
-        cords = [self.left, self.top]
-        for i in range(self.height):
-            for j in range(self.width):
-                if cords[0] + self.cell_size[0] >= x >= cords[0] and cords[1] + self.cell_size[1] >= y >= cords[1]:
-                    return j, i
-                cords[0] += self.cell_size[0]
-            cords[0] = self.left
-            cords[1] += self.cell_size[1]
-        cords[1] += self.top
-        return None, None
-
-    def get_click(self, p):
-        x, y = p[0], p[1]
-        x, y = self.get_cell(x, y)
-        self.on_click(x, y)
 
 
 left = 600
@@ -92,10 +75,10 @@ class Plat(pygame.sprite.Sprite):
     def update(self):
         if pl.mv:
             if self.dir == 'l':
-                if self.rect.x - self.u >= 0:
+                if self.rect.x - self.u >= 1:
                     self.rect = self.rect.move(-self.u, 0)
             else:
-                if self.rect.x + self.u <= size_1[0] - self.size[0]:
+                if self.rect.x + self.u <= size_1[0] - self.size[0] - 1:
                     self.rect = self.rect.move(self.u, 0)
         else:
             pass
@@ -117,13 +100,33 @@ class Ball(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, 2 * self.rad, 2 * self.rad)
 
     def update(self):
-        self.rect = self.rect.move(self.direct[0], self.direct[1])
         if pygame.sprite.spritecollideany(self, h_borders):
             self.direct[1] = -self.direct[1]
         if pygame.sprite.spritecollideany(self, v_borders):
             self.direct[0] = -self.direct[0]
         if pygame.sprite.spritecollideany(self, plate):
             self.direct[1] = -self.direct[1]
+        if pygame.sprite.spritecollideany(self, bricks):
+            for i in range(height):
+                for j in range(width):
+                    if options[i][j] == 1:
+                        if field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y):
+                            self.direct[1] = -self.direct[1]
+                            print(1)
+                            options[i][j] = 0
+                        elif field[i][j].rect.collidepoint(self.rect.x, self.rect.y + self.rad):
+                            self.direct[0] = -self.direct[0]
+                            print(1)
+                            options[i][j] = 0
+                        elif field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y + 2 * self.rad):
+                            self.direct[1] = -self.direct[1]
+                            print(1)
+                            options[i][j] = 0
+                        elif field[i][j].rect.collidepoint(self.rect.x + 2 * self.rad, self.rect.y + self.rad):
+                            self.direct[0] = -self.direct[0]
+                            print(1)
+                            options[i][j] = 0
+        self.rect = self.rect.move(self.direct[0], self.direct[1])
 
 
 class Border(pygame.sprite.Sprite):
@@ -147,15 +150,13 @@ Border(5, size_1[1] - 5, size_1[0] - 5, size_1[1] - 5)
 Border(5, 5, 5, size_1[1] - 5)
 Border(size_1[0] - 5, 5, size_1[0] - 5, size_1[1] - 5)
 running = True
-screen.fill((0, 0, 0))
+screen.fill((255, 255, 255))
 f.render(screen)
 clock = pygame.time.Clock()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            f.get_click(event.pos)
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
                 pl.dir = 'l'
