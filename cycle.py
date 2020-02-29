@@ -13,6 +13,7 @@ plate = pygame.sprite.Group()
 bricks = pygame.sprite.Group()
 height = 7
 width = 20
+score = 0
 field = [[0] * width for i in range(height)]
 for i in range(height):
     for j in range(width):
@@ -34,7 +35,7 @@ class Field(pygame.sprite.Sprite):
         cords = [self.left, self.top]
         for i in range(self.height):
             for j in range(self.width):
-                if options[i][j] == -1:
+                if options[i][j] < 0:
                     field[i][j].image = pygame.Surface([self.cell_size[0] - 1, self.cell_size[1] - 1])
                     field[i][j].image.fill(pygame.Color('green'))
                     field[i][j].rect = field[i][j].image.get_rect()
@@ -55,19 +56,18 @@ class Field(pygame.sprite.Sprite):
 left = 600
 top = 650
 size = (70, 10)
+cords_p = [500, 570]
 
 
 class Plat(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__(all_sprites)
         self.size = (70, 10)
-        self.prev = 600
-        self.top = 650
+        cords_p[0] += self.size[0] // 2
         self.flag = False
         self.dir = None
         self.mv = False
         self.u = 10
-        self.cords = [left, self.top]
         self.image = pygame.Surface([self.size[0], self.size[1]])
         self.image.fill(pygame.Color('orange'))
         self.rect = self.image.get_rect()
@@ -80,9 +80,11 @@ class Plat(pygame.sprite.Sprite):
         if pl.mv:
             if self.dir == 'l':
                 if self.rect.x - self.u >= 1:
+                    cords_p[0] -= self.u
                     self.rect = self.rect.move(-self.u, 0)
             else:
                 if self.rect.x + self.u <= size_1[0] - self.size[0] - 1:
+                    cords_p[0] += self.u
                     self.rect = self.rect.move(self.u, 0)
         else:
             pass
@@ -102,35 +104,46 @@ class Ball(pygame.sprite.Sprite):
         self.image = pygame.Surface((2 * self.rad, 2 * self.rad), pygame.SRCALPHA, 32)
         pygame.draw.circle(self.image, pygame.Color('blue'), (self.rad, self.rad), self.rad)
         self.rect = pygame.Rect(x, y, 2 * self.rad, 2 * self.rad)
+        self.rect.x = cords_p[0] - self.rad
+        self.rect.y = cords_p[1] - self.rad * 2
+
+    def release(self):
+        self.fly = True
 
     def update(self):
-        if pygame.sprite.spritecollideany(self, h_borders):
-            self.direct[1] = -self.direct[1]
-        if pygame.sprite.spritecollideany(self, v_borders):
-            self.direct[0] = -self.direct[0]
-        if pygame.sprite.spritecollideany(self, plate):
-            self.direct[1] = -self.direct[1]
-        if pygame.sprite.spritecollideany(self, bricks):
-            for i in range(height):
-                for j in range(width):
-                    if options[i][j] == 1:
-                        if field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y):
-                            self.direct[1] = -self.direct[1]
-                            print(1)
-                            options[i][j] = 0
-                        elif field[i][j].rect.collidepoint(self.rect.x, self.rect.y + self.rad):
-                            self.direct[0] = -self.direct[0]
-                            print(1)
-                            options[i][j] = 0
-                        elif field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y + 2 * self.rad):
-                            self.direct[1] = -self.direct[1]
-                            print(1)
-                            options[i][j] = 0
-                        elif field[i][j].rect.collidepoint(self.rect.x + 2 * self.rad, self.rect.y + self.rad):
-                            self.direct[0] = -self.direct[0]
-                            print(1)
-                            options[i][j] = 0
-        self.rect = self.rect.move(self.direct[0], self.direct[1])
+        if self.fly:
+            if pygame.sprite.spritecollideany(self, h_borders):
+                if self.rect.y > cords_p[1] - self.rad * 2 + 2:
+                    exit(0)
+                self.direct[1] = -self.direct[1]
+            if pygame.sprite.spritecollideany(self, v_borders):
+                self.direct[0] = -self.direct[0]
+            if pygame.sprite.spritecollideany(self, plate):
+                self.direct[1] = -self.direct[1]
+            if pygame.sprite.spritecollideany(self, bricks):
+                for i in range(height):
+                    for j in range(width):
+                        if options[i][j] == 1:
+                            if field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y):
+                                self.direct[1] = -self.direct[1]
+                                print(1)
+                                options[i][j] = 0
+                            elif field[i][j].rect.collidepoint(self.rect.x, self.rect.y + self.rad):
+                                self.direct[0] = -self.direct[0]
+                                print(1)
+                                options[i][j] = 0
+                            elif field[i][j].rect.collidepoint(self.rect.x + self.rad, self.rect.y + 2 * self.rad):
+                                self.direct[1] = -self.direct[1]
+                                print(1)
+                                options[i][j] = 0
+                            elif field[i][j].rect.collidepoint(self.rect.x + 2 * self.rad, self.rect.y + self.rad):
+                                self.direct[0] = -self.direct[0]
+                                print(1)
+                                options[i][j] = 0
+            self.rect = self.rect.move(self.direct[0], self.direct[1])
+        else:
+            self.rect.x = cords_p[0] - self.rad
+            self.rect.y = cords_p[1] - self.rad * 2
 
 
 class Border(pygame.sprite.Sprite):
@@ -147,12 +160,13 @@ class Border(pygame.sprite.Sprite):
 
 
 f = Field()
-b = Ball(600, 600)
-pl = Plat(500, 500)
+pl = Plat(500, 570)
+b = Ball(500, 570)
 Border(5, 5, size_1[0] - 5, 5)
 Border(5, size_1[1] - 5, size_1[0] - 5, size_1[1] - 5)
 Border(5, 5, 5, size_1[1] - 5)
 Border(size_1[0] - 5, 5, size_1[0] - 5, size_1[1] - 5)
+Border(5, 600, size_1[0] - 5, 600)
 running = True
 screen.fill((255, 255, 255))
 f.render(screen)
@@ -169,7 +183,7 @@ while running:
                 pl.dir = 'r'
                 pl.mv = True
             elif event.key == pygame.K_SPACE:
-                pass
+                b.release()
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 pl.mv = False
