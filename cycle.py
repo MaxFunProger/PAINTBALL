@@ -1,14 +1,15 @@
 import pygame
-from random import randint
-import field as fm
+from random import randint, shuffle
+import menu as fm
+import time
 
 pygame.init()
 size_1 = 1020, 700
 screen = pygame.display.set_mode(size_1)
-screen.fill([255, 255, 255])
 flag = False
 FPS = 60
 MOVE = 30
+SOUND = 31
 all_sprites = pygame.sprite.Group()
 h_borders = pygame.sprite.Group()
 v_borders = pygame.sprite.Group()
@@ -17,6 +18,13 @@ bricks = pygame.sprite.Group()
 height = 7
 width = 20
 score = 0
+counter = 140
+image_font = pygame.image.load('font.jpg').convert()
+image_cr = pygame.image.load('crashed.jpg').convert()
+image_nr = pygame.image.load('normal.jpg').convert()
+image_str = pygame.image.load('strong.jpg').convert()
+sounds = {'fail': 'lost_sound.wav', 'break': 'break_sound.wav', 'bouns': 'bous_sound.wav', 'click': 'click.wav'}
+
 file = open('score.txt', 'r')
 try:
     score_best = int(file.readline().strip())
@@ -41,25 +49,27 @@ class Field(pygame.sprite.Sprite):
         self.width = 20
 
     def render(self, scr):
+        global counter
         cords = [self.left, self.top]
         for i in range(self.height):
             for j in range(self.width):
                 if options[i][j] < 0:
                     field[i][j].image = pygame.Surface([self.cell_size[0] - 1, self.cell_size[1] - 1])
                     if options[i][j] == -1:
-                        field[i][j].image.fill(pygame.Color('green'))
+                        field[i][j].image = image_cr
                     elif options[i][j] == -2:
-                        field[i][j].image.fill(pygame.Color('yellow'))
+                        field[i][j].image = image_nr
                     else:
-                        field[i][j].image.fill(pygame.Color('red'))
+                        field[i][j].image = image_str
                     field[i][j].rect = field[i][j].image.get_rect()
                     field[i][j].rect.x = cords[0]
                     field[i][j].rect.y = cords[1]
                     bricks.add(field[i][j])
                     all_sprites.add(field[i][j])
-                elif options[i][j] == 0:
+                elif options[i][j] == 0 and field[i][j].rect.x != 1000000:
                     field[i][j].rect.x = 1000000
                     field[i][j].rect.y = 1000000
+                    counter -= 1
                 cords[0] += self.cell_size[0]
             cords[0] = self.left
             cords[1] += self.cell_size[1]
@@ -132,13 +142,24 @@ class Ball(pygame.sprite.Sprite):
                     file.write(str(max(score, score_best)))
                     file.close()
                     flag = True
-
-                self.direct[1] = -self.direct[1]
+                    pygame.mixer.music.pause()
+                    sound = pygame.mixer.Sound(sounds['fail'])
+                    sound.play()
+                else:
+                    sound = pygame.mixer.Sound(sounds['bouns'])
+                    sound.play()
+                    self.direct[1] = -self.direct[1]
             if pygame.sprite.spritecollideany(self, v_borders):
                 self.direct[0] = -self.direct[0]
+                sound = pygame.mixer.Sound(sounds['bouns'])
+                sound.play()
             if pygame.sprite.spritecollideany(self, plate):
                 self.direct[1] = -self.direct[1]
+                sound = pygame.mixer.Sound(sounds['bouns'])
+                sound.play()
             if pygame.sprite.spritecollideany(self, bricks):
+                sound = pygame.mixer.Sound(sounds['break'])
+                sound.play()
                 for i in range(height):
                     for j in range(width):
                         if options[i][j] != 0:
@@ -189,10 +210,19 @@ class Text:
         screen.blit(self.text, (size_1[0] - 500, self.text_y))
 
 
+class Background(pygame.sprite.Sprite):
+    def __init__(self, image_file):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load(image_file)
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = (0, 0)
+
+
 f = Field()
 pl = Plat(500, 570)
 b = Ball(500, 570)
 t = Text()
+back = Background('font.jpg')
 Border(5, 5, size_1[0] - 5, 5)
 Border(5, size_1[1] - 5, size_1[0] - 5, size_1[1] - 5)
 Border(5, 5, 5, size_1[1] - 5)
@@ -202,6 +232,12 @@ running = True
 screen.fill((255, 255, 255))
 f.render(screen)
 clock = pygame.time.Clock()
+composes = ['Let The Games Begin.mp3', 'Bang!.mp3', "Don't Throw Out My Legos.mp3",
+            "I'm Ready.mp3", "Let The Games Begin.mp3", "Sober Up.mp3"]
+shuffle(composes)
+ind = randint(0, 5)
+pygame.mixer.music.load(composes[ind])
+pygame.mixer.music.play(-1)
 fm.main()
 while running:
     for event in pygame.event.get():
@@ -217,15 +253,17 @@ while running:
             elif event.key == pygame.K_SPACE:
                 b.release()
             elif event.key == pygame.K_ESCAPE:
-                running = False
+                fm.main()
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                 pl.mv = False
-    if flag:
+    if not counter:
+        pygame.mixer.music.load('win.wav')
+        pygame.mixer.music.play(-1)
         while True:
             screen.fill([255, 255, 255])
             font = pygame.font.Font(None, 50)
-            text = font.render("Quit", 1, (100, 255, 100))
+            text = font.render("You won!!!", 1, (100, 255, 100))
             text_x = size_1[0] // 2 - text.get_width() // 2
             text_y = size_1[1] // 2 - text.get_height() // 2
             text_w = text.get_width()
@@ -240,8 +278,49 @@ while running:
                 elif event1.type == pygame.MOUSEBUTTONDOWN:
                     x, y = pygame.mouse.get_pos()
                     if text_x - 10 <= x <= text_x + text_w + 10 and text_y - 10 <= y <= text_y + text_h + 10:
+                        pygame.mixer.music.stop()
+                        sound = pygame.mixer.Sound(sounds['click'])
+                        sound.play()
+                        time.sleep(0.5)
+                        exit(0)
+    if flag:
+        flag_mus = False
+        while True:
+            screen.fill([255, 255, 255])
+            font = pygame.font.Font(None, 50)
+            text = font.render("Quit", 1, (100, 255, 100))
+            text_x = size_1[0] // 2 - text.get_width() // 2
+            text_y = size_1[1] // 2 - text.get_height() // 2
+            text_w = text.get_width()
+            text_h = text.get_height()
+            screen.blit(text, (text_x, text_y))
+            pygame.draw.rect(screen, (0, 255, 0), (text_x - 10, text_y - 10,
+                                                   text_w + 20, text_h + 20), 1)
+            font = pygame.font.Font(None, 50)
+            text1 = font.render("Your score: {}".format(score), 1, (100, 255, 100))
+            text_x1 = size_1[0] // 2 - text1.get_width() // 2
+            text_y1 = size_1[1] // 2 - text1.get_height() // 2 + 100
+            text_w1 = text.get_width()
+            text_h1 = text.get_height()
+            screen.blit(text1, (text_x1, text_y1))
+            pygame.display.flip()
+            if not flag_mus:
+                time.sleep(4.5)
+                pygame.mixer.music.unpause()
+                flag_mus = True
+            for event1 in pygame.event.get():
+                if event1.type == pygame.QUIT:
+                    exit(0)
+                elif event1.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = pygame.mouse.get_pos()
+                    if text_x - 10 <= x <= text_x + text_w + 10 and text_y - 10 <= y <= text_y + text_h + 10:
+                        pygame.mixer.music.stop()
+                        sound = pygame.mixer.Sound(sounds['click'])
+                        sound.play()
+                        time.sleep(0.5)
                         exit(0)
     clock.tick(FPS)
+    screen.blit(back.image, back.rect)
     f.render(screen)
     t.drawer()
     all_sprites.draw(screen)
