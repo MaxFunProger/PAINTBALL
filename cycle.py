@@ -15,7 +15,7 @@ h_borders = pygame.sprite.Group()
 v_borders = pygame.sprite.Group()
 plate = pygame.sprite.Group()
 bricks = pygame.sprite.Group()
-height = 7
+height = 2
 width = 20
 score = 0
 counter = 140
@@ -36,7 +36,7 @@ for i in range(height):
     for j in range(width):
         field[i][j] = pygame.sprite.Sprite()
 
-options = [[randint(-3, -1)] * width for i in range(height)]
+options = [[randint(-1, -1)] * width for i in range(height)]
 
 
 class Field(pygame.sprite.Sprite):
@@ -45,7 +45,7 @@ class Field(pygame.sprite.Sprite):
         self.cell_size = (50, 30)
         self.left = 10
         self.top = 20
-        self.height = 7
+        self.height = 2
         self.width = 20
 
     def render(self, scr):
@@ -142,7 +142,7 @@ class Ball(pygame.sprite.Sprite):
                     file.write(str(max(score, score_best)))
                     file.close()
                     flag = True
-                    pygame.mixer.music.pause()
+                    pygame.mixer.music.stop()
                     sound = pygame.mixer.Sound(sounds['fail'])
                     sound.play()
                 else:
@@ -305,8 +305,6 @@ while running:
             screen.blit(text1, (text_x1, text_y1))
             pygame.display.flip()
             if not flag_mus:
-                time.sleep(4.5)
-                pygame.mixer.music.unpause()
                 flag_mus = True
             for event1 in pygame.event.get():
                 if event1.type == pygame.QUIT:
